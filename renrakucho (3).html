@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>連絡帳整頓ツール</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600&family=Noto+Sans+JP:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #1a1410;
+  --paper: #f5f0e8;
+  --paper-dark: #e8e0d0;
+  --accent: #8b3a2a;
+  --accent2: #4a6e88;
+  --accent3: #4a7a4e;
+  --muted: #7a6e62;
+  --line: #c8bfb0;
+  --sb: env(safe-area-inset-bottom, 0px);
+  --st: env(safe-area-inset-top, 0px);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html,body { min-height: 100%; }
+body {
+  font-family: 'Noto Sans JP', sans-serif;
+  background: #2c2420;
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: calc(16px + var(--st)) 10px calc(16px + var(--sb));
+}
+
+/* ── 本体 ── */
+.book {
+  width: 100%; max-width: 860px;
+  background: var(--paper);
+  border-radius: 2px 8px 8px 2px;
+  box-shadow: -4px 0 0 #5a4a40, -8px 0 0 #3a2e28, 4px 8px 32px rgba(0,0,0,.5);
+  position: relative; overflow: hidden;
+}
+.book::before {
+  content: ''; position: absolute; left:0; top:0; bottom:0; width:18px;
+  background: linear-gradient(90deg,#3a2e28,#6b4f3e,#3a2e28); z-index:10;
+}
+.inner { margin-left:18px; padding:20px 16px 28px 14px; }
+
+/* ── ヘッダー ── */
+header { border-bottom: 2px solid var(--accent); padding-bottom:12px; margin-bottom:16px; }
+header h1 {
+  font-family:'Noto Serif JP',serif;
+  font-size: clamp(.95rem,4.5vw,1.55rem);
+  font-weight:600; color:var(--accent); letter-spacing:.08em;
+}
+.subtitle { font-size:.68rem; color:var(--muted); margin-top:3px; }
+
+/* ── メインタブ ── */
+.tabs { display:flex; gap:2px; margin-bottom:14px; }
+.tab {
+  flex:1; padding:10px 4px;
+  background:var(--paper-dark); border:1px solid var(--line); border-bottom:none;
+  cursor:pointer; font-size:.76rem; color:var(--muted);
+  font-family:'Noto Sans JP',sans-serif; text-align:center;
+  border-radius:4px 4px 0 0; touch-action:manipulation; transition:all .15s;
+}
+.tab.active {
+  background:var(--paper); color:var(--accent); font-weight:500; position:relative;
+}
+.tab.active::after {
+  content:''; position:absolute; bottom:-1px; left:0; right:0; height:2px; background:var(--paper);
+}
+
+/* ── パネル ── */
+.panel { display:none; border:1px solid var(--line); border-radius:0 4px 4px 4px; padding:16px 14px; }
+.panel.active { display:block; }
+
+/* ── 入力サブタブ ── */
+.input-tabs {
+  display:flex; border:1px solid var(--line); border-radius:4px; overflow:hidden; margin-bottom:14px;
+}
+.itab {
+  flex:1; padding:10px 4px; background:var(--paper-dark);
+  border:none; border-right:1px solid var(--line);
+  cursor:pointer; font-size:.72rem; color:var(--muted);
+  font-family:'Noto Sans JP',sans-serif; text-align:center;
+  touch-action:manipulation; transition:all .15s;
+}
+.itab:last-child { border-right:none; }
+.itab.active { background:var(--accent); color:#f5f0e8; font-weight:500; }
+
+.imode { display:none; }
+.imode.active { display:block; }
+
+/* ── ガイド ── */
+.guide {
+  font-size:.73rem; color:var(--muted); line-height:1.75;
+  margin-bottom:12px; padding:9px 11px;
+  background:var(--paper-dark); border-radius:3px; border-left:3px solid var(--accent-light,#c4664f);
+}
+
+/* ── テキストエリア ── */
+textarea {
+  width:100%; height:190px; padding:11px;
+  font-family:'Noto Sans JP',sans-serif; font-size:.84rem; line-height:1.8;
+  color:var(--ink); background:#faf7f2;
+  border:1px solid var(--line); border-radius:4px;
+  resize:vertical; outline:none; -webkit-appearance:none;
+}
+textarea:focus { border-color:#c4664f; }
+
+/* ── 汎用ボタン ── */
+.btn-row { display:flex; gap:8px; margin-top:9px; }
+.btn-p {
+  flex:2; display:flex; align-items:center; justify-content:center; gap:7px;
+  padding:13px; background:var(--accent); color:#f5f0e8; border:none; border-radius:4px;
+  font-family:'Noto Sans JP',sans-serif; font-size:.92rem; font-weight:500;
+  cursor:pointer; touch-action:manipulation; -webkit-appearance:none; transition:background .15s;
+}
+.btn-p:active { background:#c4664f; }
+.btn-s {
+  flex:1; display:flex; align-items:center; justify-content:center; gap:5px;
+  padding:11px 6px; background:transparent; color:var(--muted);
+  border:1px solid var(--line); border-radius:4px;
+  font-family:'Noto Sans JP',sans-serif; font-size:.78rem;
+  cursor:pointer; touch-action:manipulation; -webkit-appearance:none;
+}
+.btn-s:active { border-color:#c4664f; color:var(--accent); }
+
+/* ── ファイル選択ゾーン（label方式） ── */
+.file-zone {
+  display:block; border:2px dashed var(--line); border-radius:6px;
+  padding:22px 14px; text-align:center; cursor:pointer;
+  background:#faf7f2; transition:border-color .2s,background .2s;
+  margin-bottom:10px; -webkit-appearance:none;
+}
+.file-zone:active, .file-zone.over { border-color:#c4664f; background:#fdf5f3; }
+.file-zone input[type=file] { display:none; }
+.fz-icon { color:#c4664f; margin-bottom:6px; }
+.fz-text { font-size:.8rem; color:var(--muted); line-height:1.6; }
+.fz-text strong { color:var(--accent); }
+
+/* ── 画像サムネイル ── */
+.thumbs { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+.thumb { position:relative; width:70px; height:70px; border-radius:4px; overflow:hidden; border:1px solid var(--line); flex-shrink:0; }
+.thumb img { width:100%; height:100%; object-fit:cover; }
+.thumb-rm {
+  position:absolute; top:2px; right:2px;
+  background:rgba(26,20,16,.72); color:#fff; border:none; border-radius:50%;
+  width:18px; height:18px; font-size:.58rem; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; touch-action:manipulation;
+}
+
+/* ── CSVマッピング ── */
+.csv-info { font-size:.74rem; color:var(--muted); padding:5px 0 9px; }
+.map-title { font-size:.72rem; font-weight:500; color:var(--muted); margin:11px 0 5px; }
+.map-grid { display:grid; grid-template-columns:1fr 1fr; gap:7px; margin-bottom:4px; }
+.map-item { display:flex; flex-direction:column; gap:3px; }
+.map-item label { font-size:.67rem; color:var(--muted); }
+.map-item select {
+  font-size:.77rem; padding:6px 22px 6px 7px;
+  border:1px solid var(--line); border-radius:3px;
+  background:var(--paper); color:var(--ink);
+  -webkit-appearance:none; appearance:none; width:100%;
+  font-family:'Noto Sans JP',sans-serif;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237a6e62' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 6px center;
+}
+.csv-preview { overflow-x:auto; -webkit-overflow-scrolling:touch; margin-bottom:4px; }
+.csv-preview table { border-collapse:collapse; font-size:.71rem; min-width:100%; }
+.csv-preview th { background:var(--paper-dark); color:var(--accent); font-weight:500; padding:5px 8px; border:1px solid var(--line); white-space:nowrap; font-size:.67rem; }
+.csv-preview td { padding:4px 8px; border:1px solid var(--line); color:var(--ink); white-space:nowrap; max-width:110px; overflow:hidden; text-overflow:ellipsis; }
+
+/* ── スキャンボタン・ステータス ── */
+.btn-scan {
+  display:flex; align-items:center; justify-content:center; gap:7px;
+  width:100%; padding:12px; border:none; border-radius:4px;
+  font-family:'Noto Sans JP',sans-serif; font-size:.86rem; font-weight:500;
+  color:#f5f0e8; cursor:pointer; touch-action:manipulation; -webkit-appearance:none;
+  margin-top:10px; transition:background .15s;
+}
+.btn-scan.blue { background:var(--accent2); }
+.btn-scan.blue:active { background:#3a5e78; }
+.btn-scan.green { background:var(--accent3); }
+.btn-scan.green:active { background:#3a6a3e; }
+.btn-scan:disabled { background:var(--line)!important; color:var(--muted); cursor:not-allowed; }
+.status-msg { margin-top:8px; padding:8px 10px; border-radius:4px; font-size:.74rem; display:none; }
+.status-msg.loading { display:flex; align-items:center; gap:8px; background:#e8f0f7; color:#4a6e88; }
+.status-msg.ok { display:block; background:#e8f5e8; color:#3a6a3e; }
+.status-msg.err { display:block; background:#fdecea; color:#8b2a2a; }
+.spinner { width:14px; height:14px; border:2px solid #b0c8d8; border-top-color:#4a6e88; border-radius:50%; animation:spin .7s linear infinite; flex-shrink:0; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* ── 設定グリッド ── */
+.settings {
+  display:grid; grid-template-columns:1fr 1fr; gap:10px 14px;
+  margin:14px 0; padding:13px 12px;
+  background:var(--paper-dark); border-radius:4px; border:1px solid var(--line);
+}
+.si { display:flex; align-items:center; gap:7px; font-size:.79rem; color:var(--ink); }
+.si.wide { grid-column:1/-1; }
+.si label { cursor:pointer; }
+input[type=checkbox] { accent-color:var(--accent); width:16px; height:16px; flex-shrink:0; cursor:pointer; }
+select {
+  padding:5px 22px 5px 7px; border:1px solid var(--line); border-radius:3px;
+  font-family:'Noto Sans JP',sans-serif; font-size:.79rem;
+  background:var(--paper); color:var(--ink); cursor:pointer;
+  -webkit-appearance:none; appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237a6e62' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 6px center;
+}
+
+/* ── 統計 ── */
+.stats { display:flex; border:1px solid var(--line); border-radius:4px; overflow:hidden; margin-bottom:12px; }
+.stat { flex:1; display:flex; flex-direction:column; align-items:center; padding:9px 4px; border-right:1px solid var(--line); }
+.stat:last-child { border-right:none; }
+.stat-n { font-family:'Noto Serif JP',serif; font-size:1.3rem; font-weight:600; color:var(--accent); line-height:1; }
+.stat-l { font-size:.6rem; color:var(--muted); margin-top:3px; text-align:center; }
+
+/* ── 重複表示 ── */
+.dup-section { margin-bottom:14px; }
+.dup-section h3 { font-size:.73rem; font-weight:500; color:var(--muted); margin-bottom:6px; }
+.dup-item { display:flex; align-items:flex-start; gap:8px; padding:7px 10px; background:#fff3cd; border-left:3px solid #e6a817; border-radius:0 3px 3px 0; margin-bottom:5px; font-size:.75rem; }
+.dup-badge { background:#e6a817; color:#fff; padding:1px 6px; border-radius:10px; font-size:.63rem; white-space:nowrap; flex-shrink:0; margin-top:1px; }
+.dup-names { color:var(--ink); line-height:1.6; word-break:break-all; }
+
+/* ── 検索・コントロール ── */
+.controls { display:flex; flex-direction:column; gap:8px; margin-bottom:10px; }
+.search-wrap { position:relative; }
+.search-icon { position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--muted); pointer-events:none; }
+#searchInput {
+  width:100%; padding:10px 12px 10px 32px;
+  border:1px solid var(--line); border-radius:4px;
+  font-family:'Noto Sans JP',sans-serif; font-size:.86rem;
+  background:#faf7f2; color:var(--ink); outline:none; -webkit-appearance:none;
+}
+#searchInput:focus { border-color:#c4664f; }
+.ctrl-row { display:flex; gap:8px; align-items:center; }
+.sort-wrap { display:flex; align-items:center; gap:5px; }
+.sort-wrap label { font-size:.7rem; color:var(--muted); white-space:nowrap; }
+#sortSelect {
+  padding:7px 22px 7px 8px; border:1px solid var(--line); border-radius:4px;
+  font-family:'Noto Sans JP',sans-serif; font-size:.75rem;
+  background:var(--paper); color:var(--ink);
+  -webkit-appearance:none; appearance:none; cursor:pointer;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237a6e62' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 6px center;
+}
+.fgrp { display:flex; gap:4px; margin-left:auto; }
+.fbtn {
+  padding:7px 9px; border:1px solid var(--line); background:var(--paper); color:var(--muted);
+  border-radius:4px; font-size:.7rem; cursor:pointer;
+  font-family:'Noto Sans JP',sans-serif; white-space:nowrap;
+  touch-action:manipulation; -webkit-appearance:none; transition:all .15s;
+}
+.fbtn.active { background:var(--accent); color:#f5f0e8; border-color:var(--accent); }
+
+/* ── 連絡先リスト ── */
+.list-wrap { max-height:52vh; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; }
+.list-wrap::-webkit-scrollbar { width:3px; }
+.list-wrap::-webkit-scrollbar-thumb { background:var(--line); border-radius:2px; }
+.grp-hdr {
+  font-family:'Noto Serif JP',serif; font-size:1.05rem; font-weight:600; color:var(--accent);
+  padding:10px 0 4px; border-bottom:1px solid var(--line); margin-bottom:2px;
+  letter-spacing:.1em; position:sticky; top:0; background:var(--paper); z-index:2;
+}
+.card {
+  display:flex; align-items:center; padding:10px 6px; border-bottom:1px solid var(--line);
+  gap:10px; cursor:pointer; touch-action:manipulation; user-select:none; -webkit-user-select:none;
+  transition:background .1s;
+}
+.card:active { background:rgba(139,58,42,.07); }
+.avatar {
+  width:35px; height:35px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Noto Serif JP',serif; font-size:.88rem; font-weight:600; color:#f5f0e8; flex-shrink:0;
+}
+.cinfo { flex:1; min-width:0; }
+.cname { font-size:.86rem; font-weight:500; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.csub { font-size:.7rem; color:var(--muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tag { padding:2px 6px; border-radius:10px; font-size:.6rem; border:1px solid; flex-shrink:0; }
+.tag-co { border-color:#7a9e7e; color:#4a7a4e; background:#f0f7f0; }
+.tag-pe { border-color:#7a8ea0; color:#4a6e88; background:#f0f4f8; }
+mark { background:#ffe082; color:inherit; border-radius:2px; padding:0 1px; }
+
+.empty { text-align:center; padding:44px 20px; color:var(--muted); }
+.empty svg { margin-bottom:10px; opacity:.38; }
+.empty p { font-size:.8rem; line-height:1.7; }
+
+/* ── 保存・エクスポート ── */
+.divider { height:1px; background:var(--line); margin:14px 0; }
+.exp-label { font-size:.7rem; color:var(--muted); margin-bottom:7px; font-weight:500; }
+.exp-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:10px; }
+.exp-btn {
+  padding:10px 4px; border:1px solid var(--line); background:var(--paper-dark); border-radius:4px;
+  font-family:'Noto Sans JP',sans-serif; font-size:.7rem; color:var(--ink); cursor:pointer;
+  text-align:center; touch-action:manipulation; -webkit-appearance:none;
+  display:flex; flex-direction:column; align-items:center; gap:3px;
+}
+.exp-btn:active { border-color:var(--accent); color:var(--accent); }
+.exp-icon { font-size:1.15rem; line-height:1; }
+.btn-save-local {
+  display:flex; align-items:center; justify-content:center; gap:6px;
+  width:100%; padding:11px; background:var(--accent); color:#f5f0e8;
+  border:none; border-radius:4px;
+  font-family:'Noto Sans JP',sans-serif; font-size:.82rem; font-weight:500;
+  cursor:pointer; touch-action:manipulation; -webkit-appearance:none; transition:background .15s;
+}
+.btn-save-local:active { background:#c4664f; }
+.save-status { margin-top:6px; font-size:.72rem; color:#3a6a3e; min-height:18px; text-align:center; }
+.load-row {
+  display:none; align-items:center; gap:8px; margin-top:8px; padding:9px 12px;
+  background:#e8f5e8; border-radius:4px; border:1px solid #b0d4b0; flex-wrap:wrap;
+}
+.load-row.visible { display:flex; }
+.load-info { font-size:.72rem; color:#3a6a3e; flex:1; min-width:0; }
+.btn-load { padding:6px 12px; background:#4a7a4e; color:#fff; border:none; border-radius:3px; font-family:'Noto Sans JP',sans-serif; font-size:.72rem; cursor:pointer; touch-action:manipulation; white-space:nowrap; }
+.btn-clr { padding:6px 10px; background:transparent; color:var(--muted); border:1px solid var(--line); border-radius:3px; font-family:'Noto Sans JP',sans-serif; font-size:.7rem; cursor:pointer; touch-action:manipulation; white-space:nowrap; }
+
+/* ── モーダル（ボトムシート） ── */
+.overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.52); z-index:200; align-items:flex-end; justify-content:center; }
+.overlay.open { display:flex; }
+.sheet {
+  background:var(--paper); border-radius:16px 16px 0 0;
+  padding:8px 20px calc(16px + var(--sb)); width:100%; max-width:600px;
+  max-height:92vh; overflow-y:auto; -webkit-overflow-scrolling:touch;
+  position:relative; box-shadow:0 -4px 30px rgba(0,0,0,.25);
+  animation:slideUp .22s ease;
+}
+@keyframes slideUp { from{transform:translateY(50px);opacity:0} to{transform:translateY(0);opacity:1} }
+.sheet-handle { width:36px; height:4px; background:var(--line); border-radius:2px; margin:10px auto 14px; }
+.sheet-close { position:absolute; top:16px; right:16px; background:var(--paper-dark); border:none; cursor:pointer; color:var(--muted); font-size:.9rem; padding:5px 10px; border-radius:20px; touch-action:manipulation; }
+.sheet-name { font-family:'Noto Serif JP',serif; font-size:1.25rem; font-weight:600; color:var(--ink); margin-bottom:12px; padding-right:50px; }
+.mf { display:flex; gap:10px; margin-bottom:8px; font-size:.82rem; }
+.mf-l { color:var(--muted); width:55px; flex-shrink:0; font-size:.73rem; padding-top:1px; }
+.mf-v { color:var(--ink); word-break:break-all; }
+.edit-area { margin-top:14px; padding-top:14px; border-top:1px solid var(--line); }
+.edit-area label { font-size:.7rem; color:var(--muted); display:block; margin-bottom:4px; }
+.edit-area input {
+  width:100%; padding:10px; border:1px solid var(--line); border-radius:4px;
+  font-family:'Noto Sans JP',sans-serif; font-size:.86rem;
+  background:#faf7f2; color:var(--ink); outline:none; margin-bottom:10px; -webkit-appearance:none;
+}
+.edit-area input:focus { border-color:#c4664f; }
+.sheet-actions { display:flex; gap:8px; margin-top:4px; }
+.btn-sheet-save { flex:2; padding:12px; background:var(--accent); color:#f5f0e8; border:none; border-radius:4px; font-family:'Noto Sans JP',sans-serif; font-size:.86rem; font-weight:500; cursor:pointer; touch-action:manipulation; -webkit-appearance:none; }
+.btn-sheet-del { flex:1; padding:12px; background:transparent; color:var(--muted); border:1px solid var(--line); border-radius:4px; font-family:'Noto Sans JP',sans-serif; font-size:.78rem; cursor:pointer; touch-action:manipulation; -webkit-appearance:none; }
+
+/* ── デスクトップ ── */
+@media(min-width:600px){
+  body { padding:28px 16px; }
+  .book::before { width:28px; }
+  .inner { margin-left:28px; padding:32px 32px 32px 26px; }
+  header h1 { font-size:1.6rem; }
+  .settings { display:flex; flex-wrap:wrap; gap:14px 20px; }
+  .si.wide { width:auto; }
+  .btn-row { flex-direction:row; }
+  .btn-p { flex:none; padding:11px 28px; }
+  .btn-s { flex:none; padding:10px 16px; }
+  .controls { flex-direction:row; flex-wrap:wrap; align-items:center; }
+  .search-wrap { flex:1; min-width:200px; }
+  .ctrl-row { flex:none; }
+  .list-wrap { max-height:460px; }
+  .overlay { align-items:center; }
+  .sheet { border-radius:8px; padding-bottom:24px; }
+  .sheet-handle { display:none; }
+  .exp-grid { grid-template-columns:repeat(3,auto); justify-content:start; gap:8px; }
+  .exp-btn { padding:8px 14px; font-size:.76rem; flex-direction:row; }
+}
+</style>
+</head>
+<body>
+<div class="book">
+<div class="inner">
+
+<header>
+  <h1>連 絡 帳 整 頓 ツ ー ル</h1>
+  <div class="subtitle">重複削除 ・ 企業名統一 ・ 名前順 / 会社名順</div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('input',this)">① データ入力</button>
+  <button class="tab" onclick="switchTab('result',this)">② 整頓済み一覧</button>
+</div>
+
+<!-- ══ 入力パネル ══ -->
+<div class="panel active" id="panelInput">
+
+  <div class="input-tabs">
+    <button class="itab active" onclick="switchIMode('text',this)">✏️ テキスト</button>
+    <button class="itab" onclick="switchIMode('csv',this)">📄 CSV</button>
+    <button class="itab" onclick="switchIMode('vcf',this)">👤 VCF</button>
+    <button class="itab" onclick="switchIMode('image',this)">📷 画像</button>
+  </div>
+
+  <!-- テキスト -->
+  <div class="imode active" id="imodeText">
+    <div class="guide">1行1件で貼り付け。スペース・カンマ・タブ区切り対応。<br>例）田中 太郎 株式会社ABC 090-0000-0000 tanaka[at]abc.co.jp</div>
+    <textarea id="inputData" placeholder="山田 花子 株式会社サンプル 03-1234-5678 yamada@sample.co.jp&#10;株式会社サンプル 山田 花子 yamada@sample.co.jp&#10;佐藤 次郎 090-9876-5432&#10;佐藤 次郎 090-9876-5432"></textarea>
+    <div class="btn-row" style="margin-top:8px">
+      <button class="btn-s" type="button" onclick="loadSample()">サンプル読み込み</button>
+      <button class="btn-s" type="button" onclick="document.getElementById('inputData').value=''">クリア</button>
+    </div>
+  </div>
+
+  <!-- CSV -->
+  <div class="imode" id="imodeCsv">
+    <div class="guide">CSVファイルを読み込み。列を自動検出してマッピング。UTF-8・Shift-JIS自動判定。</div>
+    <!-- label方式 → iOS/Androidでも確実にファイル選択ダイアログが開く -->
+    <label class="file-zone" id="csvZone">
+      <input type="file" id="csvInput" accept=".csv,.tsv,text/csv,text/tab-separated-values" onchange="onCsvFile(this)">
+      <div class="fz-icon">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      </div>
+      <div class="fz-text"><strong>タップしてCSVを選択</strong><br>UTF-8 / Shift-JIS 自動判定</div>
+    </label>
+    <div id="csvMapping" style="display:none">
+      <div class="csv-info" id="csvInfo"></div>
+      <div class="map-title">列の割り当てを確認</div>
+      <div class="map-grid" id="mapGrid"></div>
+      <div class="map-title">プレビュー（先頭3件）</div>
+      <div class="csv-preview" id="csvPreview"></div>
+      <button class="btn-scan green" type="button" onclick="importCsv()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        このCSVを取り込む
+      </button>
+      <div class="status-msg" id="csvStatus"></div>
+    </div>
+  </div>
+
+  <!-- VCF -->
+  <div class="imode" id="imodeVcf">
+    <div class="guide">iPhoneの連絡先アプリからエクスポートした .vcf ファイルを読み込めます。複数の連絡先が入った vcf にも対応。</div>
+    <label class="file-zone">
+      <input type="file" id="vcfInput" accept=".vcf,text/vcard,text/x-vcard" multiple onchange="onVcfFile(this)">
+      <div class="fz-icon">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </div>
+      <div class="fz-text"><strong>タップしてVCFを選択</strong><br>iPhoneの連絡先アプリからエクスポートしたファイル対応</div>
+    </label>
+    <div class="status-msg" id="vcfStatus"></div>
+  </div>
+
+  <!-- 画像 -->
+  <div class="imode" id="imodeImage">
+    <div class="guide">名刺・連絡帳・スクリーンショットをAIが読み取りテキスト変換。複数枚OK。</div>
+    <label class="file-zone" id="imgZone">
+      <input type="file" id="imgInput" accept="image/*" multiple onchange="onImgFiles(this)">
+      <div class="fz-icon">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+      </div>
+      <div class="fz-text"><strong>タップして画像を選択</strong><br>カメラ撮影・アルバム両対応</div>
+    </label>
+    <div class="thumbs" id="thumbs"></div>
+    <button class="btn-scan blue" id="btnScan" type="button" onclick="scanImages()" disabled>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3"/></svg>
+      AIで連絡先を読み取る
+    </button>
+    <div class="status-msg" id="scanStatus"></div>
+  </div>
+
+  <!-- 共通設定 -->
+  <div class="settings">
+    <div class="si"><input type="checkbox" id="chkDup" checked><label for="chkDup">重複を削除</label></div>
+    <div class="si"><input type="checkbox" id="chkCo" checked><label for="chkCo">企業名の位置を統一</label></div>
+    <div class="si wide">
+      <label for="selPos">企業名の位置：</label>
+      <select id="selPos"><option value="after">名前の後ろ</option><option value="before">名前の前</option></select>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn-p" type="button" onclick="processContacts()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      整 頓 す る
+    </button>
+  </div>
+</div>
+
+<!-- ══ 結果パネル ══ -->
+<div class="panel" id="panelResult">
+
+  <div class="stats" id="statsBar" style="display:none">
+    <div class="stat"><span class="stat-n" id="sTotal">0</span><span class="stat-l">件（整頓後）</span></div>
+    <div class="stat"><span class="stat-n" id="sRemoved">0</span><span class="stat-l">重複削除</span></div>
+    <div class="stat"><span class="stat-n" id="sFixed">0</span><span class="stat-l">企業名修正</span></div>
+  </div>
+
+  <div class="dup-section" id="dupSection" style="display:none">
+    <h3>▸ 削除された重複</h3>
+    <div id="dupList"></div>
+  </div>
+
+  <div class="controls">
+    <div class="search-wrap">
+      <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="search" id="searchInput" placeholder="名前・会社・電話・メールで検索…" oninput="renderList()" autocomplete="off" autocorrect="off" spellcheck="false">
+    </div>
+    <div class="ctrl-row">
+      <div class="sort-wrap">
+        <label for="sortSelect">並び順：</label>
+        <select id="sortSelect" onchange="renderList()">
+          <option value="name">名前順</option>
+          <option value="company">会社名順</option>
+          <option value="none">元の順</option>
+        </select>
+      </div>
+      <div class="fgrp">
+        <button class="fbtn active" onclick="setFilter('all',this)">全て</button>
+        <button class="fbtn" onclick="setFilter('company',this)">会社</button>
+        <button class="fbtn" onclick="setFilter('personal',this)">個人</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="list-wrap"><div id="contactList"><div class="empty">
+    <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    <p>「① データ入力」で連絡先を入力し<br>「整頓する」を押してください</p>
+  </div></div></div>
+
+  <div class="divider" id="expDivider" style="display:none"></div>
+  <div id="expSection" style="display:none">
+    <div class="exp-label">💾 保存・エクスポート</div>
+    <div class="exp-grid">
+      <button class="exp-btn" type="button" onclick="exportCSV()"><span class="exp-icon">📊</span>CSV</button>
+      <button class="exp-btn" type="button" onclick="exportTSV()"><span class="exp-icon">📋</span>TSV</button>
+      <button class="exp-btn" type="button" onclick="exportText()"><span class="exp-icon">📝</span>テキスト</button>
+      <button class="exp-btn" type="button" onclick="exportVCF()"><span class="exp-icon">👤</span>VCF</button>
+    </div>
+    <div style="margin-top:10px">
+      <button class="btn-save-local" type="button" onclick="saveLocal()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        このブラウザに保存（次回も読み込める）
+      </button>
+      <div class="save-status" id="saveStatus"></div>
+      <div class="load-row" id="loadRow">
+        <span class="load-info" id="loadInfo"></span>
+        <button class="btn-load" type="button" onclick="loadLocal()">前回を読み込む</button>
+        <button class="btn-clr" type="button" onclick="clearLocal()">削除</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /panelResult -->
+</div></div><!-- /inner /book -->
+
+<!-- ── モーダル ── -->
+<div class="overlay" id="overlay" onclick="closeSheetOutside(event)">
+  <div class="sheet" id="sheet">
+    <div class="sheet-handle"></div>
+    <button class="sheet-close" type="button" onclick="closeSheet()">✕</button>
+    <div class="sheet-name" id="sheetName"></div>
+    <div id="sheetFields"></div>
+    <div class="edit-area">
+      <label>名前</label><input type="text" id="eName" inputmode="text">
+      <label>会社名</label><input type="text" id="eCo" inputmode="text">
+      <label>電話番号</label><input type="tel" id="eTel" inputmode="tel">
+      <label>メール</label><input type="email" id="eMail" inputmode="email">
+      <div class="sheet-actions">
+        <button class="btn-sheet-save" type="button" onclick="saveEdit()">保存</button>
+        <button class="btn-sheet-del" type="button" onclick="deleteContact()">削除</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ━━ 状態 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let contacts = [];
+let filter = 'all';
+let editIdx = -1;
+let removedDups = [];
+let fixedCnt = 0;
+
+const STORE_KEY = 'renrakucho_v2';
+
+const CORP = ['株式会社','有限会社','合同会社','合名会社','合資会社',
+  '一般社団法人','公益社団法人','一般財団法人','公益財団法人','社会福祉法人',
+  '特定非営利活動法人','NPO法人','学校法人','医療法人','農業協同組合',
+  '協同組合','事業協同組合','信用金庫','信用組合'];
+
+// ━━ タブ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
+
+window.switchTab = function(tab, btn) {
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  ['panelInput','panelResult'].forEach(id=>{
+    document.getElementById(id).classList.toggle('active', id==='panel'+cap(tab));
+  });
+};
+window.switchIMode = function(mode, btn) {
+  document.querySelectorAll('.itab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.imode').forEach(el=>el.classList.remove('active'));
+  document.getElementById('imode'+cap(mode)).classList.add('active');
+};
+
+// ━━ CSV ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let csvH=[], csvR=[], csvMap={name:'',company:'',phone:'',email:''};
+
+function onCsvFile(input){
+  const file = input.files[0]; if(!file) return;
+  input.value='';
+  readText(file).then(text=>{
+    const {headers,rows} = parseCsv(text);
+    if(!rows.length){ alert('有効なデータが見つかりません'); return; }
+    csvH=headers; csvR=rows;
+    csvMap={name:'',company:'',phone:'',email:''};
+    headers.forEach((h,i)=>{ const r=guessRole(h); if(r&&!csvMap[r]) csvMap[r]=String(i); });
+    document.getElementById('csvInfo').textContent=`📄 ${file.name}　${rows.length}行 × ${headers.length}列`;
+    renderMapGrid();
+    renderCsvPreview();
+    document.getElementById('csvMapping').style.display='block';
+    setStatus('csvStatus','','');
+  }).catch(e=>alert('読み込み失敗: '+e.message));
+}
+
+function readText(file){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=e=>{
+      const t=e.target.result;
+      if((t.match(/\uFFFD/g)||[]).length>3){
+        const r2=new FileReader();
+        r2.onload=e2=>res(e2.target.result);
+        r2.onerror=rej;
+        r2.readAsText(file,'Shift_JIS');
+      } else res(t);
+    };
+    r.onerror=rej;
+    r.readAsText(file,'UTF-8');
+  });
+}
+
+function parseCsv(text){
+  const lines=text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(l=>l.trim());
+  if(!lines.length) return {headers:[],rows:[]};
+  const parse=line=>{
+    const out=[]; let cur='',inQ=false;
+    for(let i=0;i<line.length;i++){
+      const c=line[i];
+      if(c==='"'){ if(inQ&&line[i+1]==='"'){cur+='"';i++;} else inQ=!inQ; }
+      else if((c===','||c==='\t')&&!inQ){ out.push(cur.trim());cur=''; }
+      else cur+=c;
+    }
+    out.push(cur.trim()); return out;
+  };
+  const first=parse(lines[0]);
+  const isHdr=first.every(v=>!/^[\d\-\+\(\)]{6,}$/.test(v)&&!/@/.test(v));
+  return isHdr
+    ? {headers:first, rows:lines.slice(1).map(parse)}
+    : {headers:first.map((_,i)=>`列${i+1}`), rows:lines.map(parse)};
+}
+
+function guessRole(h){
+  const l=h.toLowerCase();
+  if(/名前|氏名|name|姓名|ふりがな|フリガナ/.test(l)) return 'name';
+  if(/会社|企業|組織|company|org|勤務先/.test(l)) return 'company';
+  if(/電話|tel|phone|携帯|mobile|fax/.test(l)) return 'phone';
+  if(/mail|email|メール/.test(l)) return 'email';
+  return '';
+}
+
+function renderMapGrid(){
+  const opts=['<option value="">（使わない）</option>',
+    ...csvH.map((h,i)=>`<option value="${i}">${h}</option>`)].join('');
+  const roles=[['name','名前列'],['company','会社名列'],['phone','電話列'],['email','メール列']];
+  document.getElementById('mapGrid').innerHTML=roles.map(([k,l])=>`
+    <div class="map-item"><label>${l}</label>
+    <select onchange="csvMap['${k}']=this.value;renderCsvPreview()">
+      ${opts.replace(`value="${csvMap[k]}"`,`value="${csvMap[k]}" selected`)}
+    </select></div>`).join('');
+}
+
+function renderCsvPreview(){
+  const el=document.getElementById('csvPreview');
+  const active=['name','company','phone','email'].filter(k=>csvMap[k]!=='');
+  const lbl={name:'名前',company:'会社名',phone:'電話',email:'メール'};
+  if(!active.length){el.innerHTML='';return;}
+  const th=active.map(k=>`<th>${lbl[k]}</th>`).join('');
+  const tb=csvR.slice(0,3).map(row=>'<tr>'+active.map(k=>`<td>${esc(row[+csvMap[k]]||'')}</td>`).join('')+'</tr>').join('');
+  el.innerHTML=`<table><thead><tr>${th}</tr></thead><tbody>${tb}</tbody></table>`;
+}
+
+window.importCsv = function(){
+  const lines=csvR.map(row=>{
+    return ['name','company','phone','email']
+      .map(k=>csvMap[k]!==''?(row[+csvMap[k]]||'').trim():'')
+      .filter(Boolean).join(' ');
+  }).filter(l=>l.trim());
+  if(!lines.length){ setStatus('csvStatus','err','⚠ 取り込めるデータがありません'); return; }
+  const ex=document.getElementById('inputData').value.trim();
+  document.getElementById('inputData').value=[ex,...lines].filter(Boolean).join('\n');
+  setStatus('csvStatus','ok',`✓ ${lines.length}件を取り込みました`);
+  setTimeout(()=>{
+    const textTab=document.querySelectorAll('.itab')[0];
+    switchIMode('text', textTab);
+  },900);
+}
+
+// ━━ 画像 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let imgs=[];
+function onImgFiles(input){
+  Array.from(input.files).forEach(f=>{
+    if(!f.type.startsWith('image/')) return;
+    const r=new FileReader();
+    r.onload=e=>{ imgs.push({dataUrl:e.target.result}); renderThumbs(); };
+    r.readAsDataURL(f);
+  });
+  input.value='';
+}
+function renderThumbs(){
+  document.getElementById('thumbs').innerHTML=imgs.map((img,i)=>`
+    <div class="thumb"><img src="${img.dataUrl}">
+    <button class="thumb-rm" type="button" onclick="imgs.splice(${i},1);renderThumbs()">✕</button></div>`).join('');
+  document.getElementById('btnScan').disabled=imgs.length===0;
+}
+window.scanImages = async function(){
+  if(!imgs.length) return;
+  const btn=document.getElementById('btnScan');
+  btn.disabled=true;
+  setStatus('scanStatus','loading','AIが読み取り中…');
+  try {
+    const results=[];
+    for(let i=0;i<imgs.length;i++){
+      setStatus('scanStatus','loading',`${i+1}/${imgs.length}枚目を読み取り中…`);
+      const t=await extractFromImage(imgs[i].dataUrl);
+      if(t) results.push(t);
+    }
+    if(!results.length) throw new Error('連絡先を検出できませんでした');
+    const ex=document.getElementById('inputData').value.trim();
+    document.getElementById('inputData').value=[ex,...results].filter(Boolean).join('\n');
+    setStatus('scanStatus','ok',`✓ ${imgs.length}枚から読み取りました。テキストタブで確認できます`);
+    setTimeout(()=>{
+      const textTab=document.querySelectorAll('.itab')[0];
+      switchIMode('text', textTab);
+    },1000);
+  } catch(e){
+    setStatus('scanStatus','err','⚠ '+e.message);
+  } finally { btn.disabled=imgs.length===0; }
+}
+async function extractFromImage(dataUrl){
+  const [hd,b64]=dataUrl.split(',');
+  const mt=hd.match(/:(.*?);/)[1];
+  const res=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      model:'claude-sonnet-4-20250514', max_tokens:1000,
+      messages:[{role:'user',content:[
+        {type:'image',source:{type:'base64',media_type:mt,data:b64}},
+        {type:'text',text:`この画像から連絡先情報を抽出してください。
+1件1行で出力。フォーマット: 名前 会社名 電話番号 メール
+ない項目はスキップ。説明不要。連絡先なければ「なし」とだけ回答。`}
+      ]}]
+    })
+  });
+  if(!res.ok){ const e=await res.json().catch(()=>({})); throw new Error(e.error?.message||`APIエラー(${res.status})`); }
+  const d=await res.json();
+  const t=(d.content||[]).map(b=>b.text||'').join('').trim();
+  return t==='なし'?'':t;
+}
+
+// ━━ 解析 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function parseLine(line){
+  line=line.trim(); if(!line) return null;
+  const toks=line.split(/[\s\t,;，；　]+/).filter(t=>t);
+  let name='',company='',phone='',email='';
+  const others=[];
+  for(const t of toks){
+    if(/^[\w.+\-]+@[\w\-]+\.[\w.]+$/.test(t)) email=t;
+    else if(isPhone(t)) phone=normPhone(t);
+    else if(isCorpToken(t)) company=company?company+' '+t:t;
+    else others.push(t);
+  }
+  return {name:others.join(' ').trim(),company:company.trim(),phone,email,raw:line};
+}
+function isPhone(t){
+  const n=t.replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).replace(/[ー－]/g,'-');
+  return /^\+?[\d][\d\-]{6,}$/.test(n);
+}
+function normPhone(t){
+  return t.replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).replace(/[ー－]/g,'-');
+}
+function isCorpToken(t){
+  return CORP.some(s=>(t.endsWith(s)&&t.length>s.length)||(t.startsWith(s)&&t.length>s.length));
+}
+function corpCore(name){
+  name=(name||'').trim();
+  for(const s of CORP){
+    if(name.endsWith(s)) return {core:name.slice(0,-s.length).trim(),sfx:s};
+    if(name.startsWith(s)) return {core:name.slice(s.length).trim(),sfx:s};
+  }
+  return {core:name,sfx:''};
+}
+function normCorpKey(name){
+  const {core,sfx}=corpCore(name); return sfx?sfx+core:name;
+}
+function reformatCorp(name,pos){
+  const {core,sfx}=corpCore(name); if(!sfx) return name;
+  return pos==='before'?sfx+core:core+sfx;
+}
+
+// ━━ メイン処理 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+window.processContacts = function(){
+  const raw=document.getElementById('inputData').value.trim();
+  if(!raw){ alert('データを入力してください'); return; }
+
+  const doDup   =document.getElementById('chkDup').checked;
+  const doCo    =document.getElementById('chkCo').checked;
+  const pos     =document.getElementById('selPos').value;
+  const lines   =raw.split('\n').map(l=>l.trim()).filter(l=>l);
+  let cs        =lines.map(parseLine).filter(Boolean);
+
+  // 企業名統一
+  fixedCnt=0;
+  if(doCo) cs=cs.map(c=>{
+    if(!c.company) return c;
+    const r=reformatCorp(c.company,pos);
+    if(r!==c.company) fixedCnt++;
+    return {...c,company:r};
+  });
+
+  // 重複削除（スマート判定）
+  removedDups=[];
+  if(doDup){
+    const unique=[];
+    const dupGroups=new Map(); // uniqueIndex -> [raw,...]
+
+    for(const c of cs){
+      const nName  =c.name.replace(/[\s　]/g,'');
+      const nCo    =normCorpKey(c.company).replace(/[\s　]/g,'');
+      const nPhone =c.phone.replace(/[-\(\)\s]/g,'');
+      const nEmail =c.email.toLowerCase().trim();
+
+      let found=-1;
+      for(let i=0;i<unique.length;i++){
+        const u=unique[i];
+        const uN =u.name.replace(/[\s　]/g,'');
+        const uCo=normCorpKey(u.company).replace(/[\s　]/g,'');
+        const uP =u.phone.replace(/[-\(\)\s]/g,'');
+        const uE =u.email.toLowerCase().trim();
+
+        const allSame = nName===uN && nCo===uCo && nPhone===uP && nEmail===uE;
+        const phoneHit= nPhone&&uP&&nPhone===uP;
+        const emailHit= nEmail&&uE&&nEmail===uE;
+        const nameCoHit=nName&&uN&&nName===uN&&nCo&&uCo&&nCo===uCo;
+
+        if(allSame||phoneHit||emailHit||nameCoHit){ found=i; break; }
+      }
+
+      if(found>=0){
+        // 情報マージ
+        const u=unique[found];
+        unique[found]={
+          name:   u.name   ||c.name,
+          company:u.company||c.company,
+          phone:  u.phone  ||c.phone,
+          email:  u.email  ||c.email,
+          raw:    u.raw,
+        };
+        if(!dupGroups.has(found)) dupGroups.set(found,[u.raw]);
+        dupGroups.get(found).push(c.raw);
+      } else {
+        unique.push(c);
+      }
+    }
+    for(const [,raws] of dupGroups) if(raws.length>1) removedDups.push(raws);
+    cs=unique;
+  }
+
+  contacts=cs;
+  updateStats();
+  renderDups();
+  renderList();
+  show('statsBar');
+  show('expDivider');
+  show('expSection');
+
+  // メインタブを結果へ
+  const resultTab=document.querySelectorAll('.tab')[1];
+  switchTab('result', resultTab);
+}
+
+// ━━ ソート ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function hiragana(s){ return (s||'').replace(/[\u30a1-\u30f6]/g,c=>String.fromCharCode(c.charCodeAt(0)-0x60)); }
+
+function sorted(cs,mode){
+  if(mode==='none') return cs;
+  return [...cs].sort((a,b)=>{
+    if(mode==='name') return hiragana(a.name).localeCompare(hiragana(b.name),'ja');
+    if(mode==='company'){
+      if(!a.company&&!b.company) return hiragana(a.name).localeCompare(hiragana(b.name),'ja');
+      if(!a.company) return 1; if(!b.company) return -1;
+      const ca=hiragana(corpCore(a.company).core);
+      const cb=hiragana(corpCore(b.company).core);
+      const d=ca.localeCompare(cb,'ja');
+      return d!==0?d:hiragana(a.name).localeCompare(hiragana(b.name),'ja');
+    }
+    return 0;
+  });
+}
+
+function groupChar(str,mode){
+  const s=mode==='company'?corpCore(str||'').core:(str||'');
+  if(!s) return '（なし）';
+  const h=hiragana(s[0]); const code=h.charCodeAt(0);
+  const rows=[['あ',0x3041,0x3046],['か',0x304B,0x3053],['さ',0x3055,0x305C],
+    ['た',0x305F,0x3069],['な',0x306A,0x306E],['は',0x306F,0x307B],
+    ['ま',0x307E,0x3082],['や',0x3084,0x3088],['ら',0x3089,0x308D],['わ',0x308F,0x3093]];
+  for(const [l,a,b] of rows) if(code>=a&&code<=b) return l;
+  if(/[a-zA-Zａ-ｚＡ-Ｚ]/.test(s[0])) return 'A–Z';
+  if(/[0-9０-９]/.test(s[0])) return '数字';
+  return s[0]||'他';
+}
+
+// ━━ 描画 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function renderList(){
+  const el=document.getElementById('contactList');
+  const q=(document.getElementById('searchInput').value||'').trim().toLowerCase();
+  const mode=document.getElementById('sortSelect').value;
+
+  let cs=contacts.filter(c=>{
+    if(filter==='company'&&!c.company) return false;
+    if(filter==='personal'&&c.company) return false;
+    if(!q) return true;
+    return (c.name+c.company+c.phone+c.email).toLowerCase().includes(q);
+  });
+
+  if(!cs.length){
+    el.innerHTML='<div class="empty"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><p>該当なし</p></div>';
+    return;
+  }
+
+  const sc=sorted(cs,mode);
+  let html=''; let lastG=null;
+  for(const c of sc){
+    const gkey=mode==='company'?c.company:c.name;
+    const g=mode!=='none'?groupChar(gkey,mode):null;
+    if(g&&g!==lastG){
+      html+=`<div class="grp-hdr">${g}</div>`;
+      lastG=g;
+    }
+    const ri=contacts.indexOf(c);
+    const av=mode==='company'&&c.company?(corpCore(c.company).core[0]||'?'):(c.name[0]||'?');
+    const hl=t=>q&&t?t.replace(new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi'),m=>`<mark>${m}</mark>`):t||'';
+    const sub=[hl(c.company),hl(c.phone),hl(c.email)].filter(Boolean).join('　');
+    const tag=c.company?'<span class="tag tag-co">会社</span>':'<span class="tag tag-pe">個人</span>';
+    html+=`<div class="card" onclick="openSheet(${ri})">
+      <div class="avatar" style="background:${acolor(c.name)}">${av}</div>
+      <div class="cinfo"><div class="cname">${hl(c.name)||'（名前なし）'}</div>${sub?`<div class="csub">${sub}</div>`:''}</div>
+      ${tag}</div>`;
+  }
+  el.innerHTML=html;
+}
+
+function acolor(n){
+  if(!n) return '#8b3a2a';
+  const C=['#8b3a2a','#4a7a4e','#4a6e88','#7a5a2a','#6a4a7a','#2a6a6a'];
+  let h=0; for(let i=0;i<n.length;i++) h=(h*31+n.charCodeAt(i))%C.length;
+  return C[Math.abs(h)%C.length];
+}
+
+window.setFilter = function(f){
+  filter=f;
+  document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  renderList();
+}
+
+function updateStats(){
+  document.getElementById('sTotal').textContent=contacts.length;
+  document.getElementById('sRemoved').textContent=removedDups.reduce((s,d)=>s+d.length-1,0);
+  document.getElementById('sFixed').textContent=fixedCnt;
+}
+
+function renderDups(){
+  const sec=document.getElementById('dupSection');
+  const el=document.getElementById('dupList');
+  if(!removedDups.length){ sec.style.display='none'; return; }
+  sec.style.display='block';
+  el.innerHTML=removedDups.map(g=>`<div class="dup-item"><span class="dup-badge">${g.length}件</span><span class="dup-names">${g.map(esc).join('<br>')}</span></div>`).join('');
+}
+
+// ━━ モーダル ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+window.openSheet = function(i){
+  editIdx=i;
+  const c=contacts[i];
+  document.getElementById('sheetName').textContent=c.name||c.company||'（不明）';
+  const fs=[['会社',c.company],['電話',c.phone],['メール',c.email]].filter(([,v])=>v);
+  document.getElementById('sheetFields').innerHTML=fs.map(([l,v])=>
+    `<div class="mf"><span class="mf-l">${l}</span><span class="mf-v">${esc(v)}</span></div>`).join('');
+  document.getElementById('eName').value=c.name;
+  document.getElementById('eCo').value=c.company;
+  document.getElementById('eTel').value=c.phone;
+  document.getElementById('eMail').value=c.email;
+  document.getElementById('overlay').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+window.closeSheet = function(){ document.getElementById('overlay').classList.remove('open'); document.body.style.overflow=''; }
+window.closeSheetOutside = function(e){ if(e.target===document.getElementById('overlay')) closeSheet(); }
+window.saveEdit = function(){
+  if(editIdx<0) return;
+  contacts[editIdx]={...contacts[editIdx],
+    name:document.getElementById('eName').value.trim(),
+    company:document.getElementById('eCo').value.trim(),
+    phone:document.getElementById('eTel').value.trim(),
+    email:document.getElementById('eMail').value.trim(),
+  };
+  closeSheet(); renderList(); updateStats();
+}
+window.deleteContact = function(){
+  if(editIdx<0) return;
+  if(!confirm('削除しますか？')) return;
+  contacts.splice(editIdx,1);
+  closeSheet(); renderList(); updateStats();
+}
+
+// ━━ VCF 読み込み ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function onVcfFile(input){
+  const files=Array.from(input.files);
+  if(!files.length) return;
+  input.value='';
+  setStatus('vcfStatus','loading',`読み込み中… (${files.length}ファイル)`);
+
+  Promise.all(files.map(f=>readText(f))).then(texts=>{
+    const all=texts.join('\n');
+    const parsed=parseVcf(all);
+    if(!parsed.length){ setStatus('vcfStatus','err','⚠ 連絡先が見つかりませんでした'); return; }
+
+    // テキストエリアに追加
+    const lines=parsed.map(c=>[c.name,c.company,c.phone,c.email].filter(Boolean).join(' '));
+    const ex=document.getElementById('inputData').value.trim();
+    document.getElementById('inputData').value=[ex,...lines].filter(Boolean).join('\n');
+
+    setStatus('vcfStatus','ok',`✓ ${parsed.length}件を読み込みました。テキストタブで確認できます`);
+    setTimeout(()=>{
+      const textTab=document.querySelectorAll('.itab')[0];
+      switchIMode('text', textTab);
+    },900);
+  }).catch(e=>setStatus('vcfStatus','err','⚠ 読み込み失敗: '+e.message));
+}
+
+function parseVcf(text){
+  // 改行コード統一 & 折り畳み行を結合（RFC 6350）
+  text=text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').replace(/\n[ \t]/g,'');
+
+  const cards=[];
+  const blocks=text.split(/BEGIN:VCARD/i).slice(1);
+
+  for(const block of blocks){
+    const lines=block.split('\n');
+    const get=(prop)=>{
+      // PROP;param=val:value 形式をパース
+      for(const l of lines){
+        const upper=l.toUpperCase();
+        if(upper.startsWith(prop+':')||upper.startsWith(prop+';')){
+          return decodeVcfValue(l.split(':').slice(1).join(':').trim());
+        }
+      }
+      return '';
+    };
+
+    // 名前：FN（表示名）優先、なければN（構造化名）
+    let name=get('FN');
+    if(!name){
+      const n=get('N'); // 姓;名;ミドル;敬称;接尾辞
+      if(n){
+        const parts=n.split(';').map(s=>s.trim()).filter(Boolean);
+        // 日本語: 姓 名の順
+        name=parts.slice(0,2).join(' ');
+      }
+    }
+
+    // 電話：TEL で始まる行（複数あれば最初の携帯 or 最初のもの）
+    let phone='';
+    const telLines=lines.filter(l=>l.toUpperCase().startsWith('TEL'));
+    // CELL/MOBILEを優先
+    const mobile=telLines.find(l=>/CELL|MOBILE/i.test(l));
+    const telLine=mobile||telLines[0]||'';
+    if(telLine) phone=decodeVcfValue(telLine.split(':').slice(1).join(':').trim()).replace(/[\s\-\.\(\)]/g,'').replace(/^(\+81|0081)/,'0');
+
+    // メール
+    let email='';
+    const emlLine=lines.find(l=>l.toUpperCase().startsWith('EMAIL'));
+    if(emlLine) email=decodeVcfValue(emlLine.split(':').slice(1).join(':').trim());
+
+    // 会社：ORG
+    let company=decodeVcfValue(get('ORG')).split(';')[0].trim();
+
+    if(name||company||phone||email){
+      cards.push({name,company,phone,email});
+    }
+  }
+  return cards;
+}
+
+function decodeVcfValue(val){
+  if(!val) return '';
+  // ENCODING=QUOTED-PRINTABLEのデコード（簡易）
+  if(/=([0-9A-Fa-f]{2})/.test(val)){
+    try {
+      val=val.replace(/=\r?\n/g,'').replace(/=([0-9A-Fa-f]{2})/g,(_,h)=>String.fromCharCode(parseInt(h,16)));
+      // Shift-JIS文字列になっている場合はそのまま返す（ブラウザが処理）
+    } catch(e){}
+  }
+  // \n \, などのエスケープ解除
+  return val.replace(/\\n/gi,'\n').replace(/\\,/g,',').replace(/\\;/g,';').replace(/\\\\/g,'\\').trim();
+}
+
+
+function vcfEsc(s){ return (s||'').replace(/\\/g,'\\\\').replace(/,/g,'\\,').replace(/;/g,'\\;'); }
+
+
+function dl(content, name, mime){
+  try {
+    const bom  = mime.includes('csv') || mime.includes('text') ? '﻿' : '';
+    const blob = new Blob([bom + content], {type: mime + ';charset=utf-8'});
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 1000);
+  } catch(e) {
+    const uri = 'data:' + mime + ';charset=utf-8,﻿' + encodeURIComponent(content);
+    window.open(uri, '_blank');
+  }
+}
+window.exportCSV = function(){
+  const h=['名前','会社名','電話番号','メール'].join(',');
+  const rows=contacts.map(c=>[c.name,c.company,c.phone,c.email].map(v=>`"${(v||'').replace(/"/g,'""')}"`).join(','));
+  dl([h,...rows].join('\n'),'連絡帳.csv','text/csv');
+}
+window.exportTSV = function(){
+  const h=['名前','会社名','電話番号','メール'].join('\t');
+  const rows=contacts.map(c=>[c.name,c.company,c.phone,c.email].join('\t'));
+  dl([h,...rows].join('\n'),'連絡帳.tsv','text/tab-separated-values');
+}
+window.exportText = function(){
+  dl(contacts.map(c=>[c.name,c.company,c.phone,c.email].filter(Boolean).join('　')).join('\n'),'連絡帳.txt','text/plain');
+}
+window.exportVCF = function(){
+  if(!contacts.length){ alert('連絡先がありません'); return; }
+  var cards = [];
+  for(var i=0;i<contacts.length;i++){
+    var ct=contacts[i];
+    var nm=(ct.name||'').trim();
+    var pts=nm?nm.split(/[ \u3000]+/):[];
+    var family=pts[0]||'';
+    var given=pts.slice(1).join(' ');
+    var rows=['BEGIN:VCARD','VERSION:3.0'];
+    rows.push('FN:'+vcfEsc(nm||ct.company||'（名前なし）'));
+    rows.push('N:'+vcfEsc(family)+';'+vcfEsc(given)+';;;');
+    if(ct.company){
+      rows.push('ORG:'+vcfEsc(ct.company));
+    }
+    if(ct.phone){
+      var ptype=/^0[789]0/.test(ct.phone.replace(/[-\s]/g,''))?'CELL':'WORK';
+      rows.push('TEL;TYPE='+ptype+':'+ct.phone);
+    }
+    if(ct.email){
+      rows.push('EMAIL;TYPE=INTERNET:'+ct.email);
+    }
+    rows.push('UID:rnk-'+i+'-'+Date.now());
+    rows.push('END:VCARD');
+    cards.push(rows.join('\r\n'));
+  }
+  var content=cards.join('\r\n\r\n')+'\r\n';
+  var blob=new Blob([content],{type:'text/x-vcard;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var fn='連絡帳_'+contacts.length+'件.vcf';
+  var isIOS=/iP(hone|ad|od)/.test(navigator.userAgent);
+  if(isIOS){
+    var w=window.open(url,'_blank');
+    if(!w) showVcfBanner(url,fn,contacts.length);
+  } else {
+    var a=document.createElement('a');
+    a.href=url; a.download=fn;
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){URL.revokeObjectURL(url);a.remove();},2000);
+  }
+};
+
+function showVcfBanner(url,fn,count){
+  var old2=document.getElementById('vcfBanner');
+  if(old2)old2.remove();
+  var div=document.createElement('div');
+  div.id='vcfBanner';
+  div.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#4a7a4e;color:#fff;padding:14px 20px;border-radius:8px;font-size:.85rem;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.35);text-align:center;max-width:90vw;';
+  div.innerHTML='<div style="margin-bottom:8px">VCFを開く（'+count+'件）</div>'
+    +'<a href="'+url+'" download="'+fn+'" style="background:#fff;color:#4a7a4e;padding:8px 18px;border-radius:4px;font-weight:500;text-decoration:none;">ダウンロード</a>'
+    +'<button onclick="document.getElementById(\'vcfBanner\').remove()" style="position:absolute;top:6px;right:10px;background:none;border:none;color:#fff;font-size:1rem;cursor:pointer;">✕</button>';
+  document.body.appendChild(div);
+}
+
+
+window.addEventListener('DOMContentLoaded',()=>{
+  checkLocal();
+  if(localStorage.getItem('renrakucho_v2')){
+    show('expDivider'); show('expSection');
+  }
+});
+</script>
+</body>
+</html>
